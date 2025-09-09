@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"text/tabwriter"
 )
 
 type Task struct {
@@ -106,11 +108,13 @@ func (s *Store) delete(ID int) error {
 }
 
 func (s *Store) list() {
-	fmt.Printf("ID\tTitle\tDescription\tCompleted\n")
-	fmt.Printf("--\t-----\t-----------\t---------\n")
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tTitle\tDescription\tCompleted")
+	fmt.Fprintln(w, "--\t-----\t-----------\t---------")
 	for _, task := range s.Tasks {
-		fmt.Printf("%d\t%s\t%s\t%t\n", task.ID, task.Title, task.Description, task.Done)
+		fmt.Fprintf(w, "%d\t%s\t%s\t%t\n", task.ID, task.Title, task.Description, task.Done)
 	}
+	w.Flush()
 }
 
 func (s *Store) search(ID int) (*Task, error) {
@@ -134,8 +138,14 @@ func loadStore(path string) (*Store, error) {
 	}
 	defer f.Close()
 
-	if err := json.NewDecoder(f).Decode(&s.Tasks); err != nil {
-		return nil, err
+	dec := json.NewDecoder(f)
+	if err := dec.Decode(&s.Tasks); err != nil {
+		if err == io.EOF {
+			// empty file — treat as no tasks
+			s.Tasks = []Task{}
+		} else {
+			return nil, err
+		}
 	}
 
 	// compute nextID

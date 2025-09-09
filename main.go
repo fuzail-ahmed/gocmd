@@ -8,7 +8,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Please pass args")
+		fmt.Println("Usage: gocmd <add|list|read|modify|delete> [flags]")
 		return
 	}
 
@@ -19,7 +19,7 @@ func main() {
 		title := fs.String("title", "", "title")
 		desc := fs.String("desc", "", "description")
 		fs.Parse(os.Args[2:])
-		fmt.Println(*title, *desc)
+		// fmt.Printf("Adding task: title=%q desc=%q\n", *title, *desc)
 
 		// Store it to the json file
 		s, err := loadStore("./tasks.json")
@@ -107,6 +107,7 @@ func main() {
 		task, err := s.search(*id)
 		if err != nil {
 			fmt.Println(err.Error())
+			return // avoid nil deref
 		}
 		task.Print()
 	case "delete":
@@ -119,7 +120,8 @@ func main() {
 			return
 		}
 		if err := s.delete(*id); err != nil {
-			fmt.Println(err)
+			fmt.Println("delete failed:", err)
+			return
 		}
 		fmt.Println("Successfully deleted task")
 	default:
